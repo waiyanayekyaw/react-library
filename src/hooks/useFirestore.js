@@ -8,38 +8,50 @@ import {
     query,
     serverTimestamp,
     updateDoc,
+    where,
 } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { db } from "../firebase";
 
 export default function useFirestore() {
-    let getCollection = (colName) => {
+    let getCollection = (colName, _q) => {
+        let qRef = useRef(_q).current;
+
         let [error, setError] = useState("");
         let [loading, setLoading] = useState(false);
         let [data, setData] = useState([]);
 
-        useEffect(function () {
-            setLoading(true);
-            let ref = collection(db, colName);
-            let q = query(ref, orderBy("date", "desc"));
+        useEffect(
+            function () {
+                setLoading(true);
+                let ref = collection(db, colName);
+                let queries = [];
 
-            //Real time
-            onSnapshot(q, (docs) => {
-                if (docs.empty) {
-                    setError("No documents found");
-                    setLoading(false);
-                } else {
-                    let collectionDatas = [];
-                    docs.forEach((doc) => {
-                        let document = { id: doc.id, ...doc.data() };
-                        collectionDatas.push(document);
-                    });
-                    setData(collectionDatas);
-                    setLoading(false);
-                    setError("");
+                if (qRef) {
+                    queries.push(where(...qRef));
                 }
-            });
-        }, []);
+                queries.push(orderBy("date", "desc"));
+                let q = query(ref, ...queries);
+
+                //Real time
+                onSnapshot(q, (docs) => {
+                    if (docs.empty) {
+                        setError("No documents found");
+                        setLoading(false);
+                    } else {
+                        let collectionDatas = [];
+                        docs.forEach((doc) => {
+                            let document = { id: doc.id, ...doc.data() };
+                            collectionDatas.push(document);
+                        });
+                        setData(collectionDatas);
+                        setLoading(false);
+                        setError("");
+                    }
+                });
+            },
+            [qRef]
+        );
         return { error, loading, data };
     };
 

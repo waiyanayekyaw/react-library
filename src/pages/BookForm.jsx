@@ -2,9 +2,10 @@ import React, { useContext, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import useTheme from "../hooks/useTheme";
 import { doc, getDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, storage } from "../firebase";
 import useFirestore from "../hooks/useFirestore";
 import { AuthContext } from "../contexts/AuthContext";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 export default function BookForm() {
     let { id } = useParams();
@@ -14,6 +15,8 @@ export default function BookForm() {
     let [newCategory, setNewCategory] = useState("");
     let [categories, setCategories] = useState([]);
     let [isEdit, setIsEdit] = useState(false);
+    let [file, setFile] = useState(null);
+    let [preview, setPreview] = useState("");
 
     let { updateDocument, addCollection } = useFirestore();
 
@@ -53,13 +56,25 @@ export default function BookForm() {
 
     let { user } = useContext(AuthContext);
 
+    let uploadToFirebase = async (file) => {
+        let uniqueFileName = Date.now().toString() + "_" + file.name;
+        let path = "/covers/" + user.uid + "/" + uniqueFileName;
+        let storageRef = ref(storage, path);
+        await uploadBytes(storageRef, file);
+        return await getDownloadURL(storageRef);
+    };
+
     let submitForm = async (e) => {
         e.preventDefault();
+        let url = await uploadToFirebase(file);
+        // console.log(url);
+
         let data = {
             title,
             description,
             categories,
             uid: user.uid,
+            cover: url,
         };
         if (isEdit) {
             await updateDocument("books", id, data);
@@ -68,6 +83,26 @@ export default function BookForm() {
         }
         navigate("/");
     };
+
+    let handlePhotoChange = (e) => {
+        setFile(e.target.files[0]);
+    };
+
+    let handlePreviewImage = () => {
+        let reader = new FileReader(); //js Class
+        reader.readAsDataURL(file);
+
+        reader.onload = () => {
+            //onload is event
+            setPreview(reader.result);
+        };
+    };
+
+    useEffect(() => {
+        if (file) {
+            handlePreviewImage(file);
+        }
+    }, [file]);
 
     let { isDark } = useTheme();
 
@@ -170,6 +205,21 @@ export default function BookForm() {
                                 {c}
                             </span>
                         ))}
+                    </div>
+
+                    <div className="w-full px-3">
+                        <label
+                            className={`block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2 ${
+                                isDark ? "text-white" : ""
+                            }`}
+                            htmlFor="grid-password"
+                        >
+                            Book Cover
+                        </label>
+                        <input type="file" onChange={handlePhotoChange} />
+                        {!!preview && (
+                            <img src={preview} alt="" className="my-3" width={400} height={400} />
+                        )}
                     </div>
                 </div>
 

@@ -1,10 +1,10 @@
-import React from "react";
-import book from "../assets/book.jpg";
+import React, { useContext } from "react";
 import { Link, useLocation } from "react-router-dom";
 import useTheme from "../hooks/useTheme";
 import trash from "../assets/trash.svg";
 import pencil from "../assets/pencil.svg";
 import useFirestore from "../hooks/useFirestore";
+import { AuthContext } from "../contexts/AuthContext";
 
 export default function BookList() {
     let location = useLocation();
@@ -13,7 +13,9 @@ export default function BookList() {
     let search = params.get("search");
 
     let { getCollection, deleteDocument } = useFirestore();
-    let { error, loading, data: books } = getCollection("books");
+
+    let { user } = useContext(AuthContext);
+    let { error, loading, data: books } = getCollection("books", ["uid", "==", user.uid]);
 
     const deleteBook = async (e, id) => {
         e.preventDefault();
@@ -44,7 +46,7 @@ export default function BookList() {
                                     isDark ? "bg-dcard text-white border-primary" : ""
                                 }`}
                             >
-                                <img src={book} alt="" className="w-full h-56" />
+                                <img src={b.cover} alt="" className="w-full h-56" />
                                 <div className="text-center space-y-2 mt-3">
                                     <h1>{b.title}</h1>
                                     <p>{b.description}</p>
