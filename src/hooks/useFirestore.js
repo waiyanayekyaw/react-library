@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { db } from "../firebase";
 
 export default function useFirestore() {
-    let getCollection = (colName, _q) => {
+    let getCollection = (colName, _q, search) => {
         let qRef = useRef(_q).current;
 
         let [error, setError] = useState("");
@@ -38,19 +38,28 @@ export default function useFirestore() {
                     if (docs.empty) {
                         setError("No documents found");
                         setLoading(false);
+                        setData([]);
                     } else {
                         let collectionDatas = [];
                         docs.forEach((doc) => {
                             let document = { id: doc.id, ...doc.data() };
                             collectionDatas.push(document);
                         });
-                        setData(collectionDatas);
+
+                        if (search?.field && search?.value) {
+                            let searchedDatas = collectionDatas.filter((doc) => {
+                                return doc[search?.field].includes(search?.value);
+                            });
+                            setData(searchedDatas);
+                        } else {
+                            setData(collectionDatas);
+                        }
                         setLoading(false);
                         setError("");
                     }
                 });
             },
-            [qRef]
+            [qRef, search?.field, search?.value]
         );
         return { error, loading, data };
     };

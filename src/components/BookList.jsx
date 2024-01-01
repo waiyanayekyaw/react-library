@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import useTheme from "../hooks/useTheme";
 import trash from "../assets/trash.svg";
 import pencil from "../assets/pencil.svg";
@@ -8,14 +8,21 @@ import { AuthContext } from "../contexts/AuthContext";
 
 export default function BookList() {
     let location = useLocation();
+    let navigate = useNavigate();
     let params = new URLSearchParams(location.search);
-
     let search = params.get("search");
 
     let { getCollection, deleteDocument } = useFirestore();
 
     let { user } = useContext(AuthContext);
-    let { error, loading, data: books } = getCollection("books", ["uid", "==", user.uid]);
+    let {
+        error,
+        loading,
+        data: books,
+    } = getCollection("books", ["uid", "==", user.uid], {
+        field: "title",
+        value: search,
+    });
 
     const deleteBook = async (e, id) => {
         e.preventDefault();
@@ -63,9 +70,15 @@ export default function BookList() {
                                             ))}
                                         </div>
                                         <div className="flex space-x-4 items-center">
-                                            <Link to={`/edit/${b.id}`}>
-                                                <img src={pencil} alt="" />
-                                            </Link>
+                                            <img
+                                                src={pencil}
+                                                alt=""
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    navigate(`/edit/${b.id}`);
+                                                }}
+                                            />
+
                                             <img
                                                 src={trash}
                                                 alt=""
